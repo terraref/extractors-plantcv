@@ -28,7 +28,7 @@ messageType = "*.dataset.file.added"
 sslVerify = os.getenv('RABBITMQ_SSLVERIFY', False)
 
 # Comma delimited list of endpoints and keys for registering extractor information
-registrationEndpoints = os.getenv('REGISTRATION_ENDPOINTS', "http://localhost:9000/clowder/api/extractors?key=key1, http://host2:9000/api/extractors?key=key2")
+registrationEndpoints = os.getenv('REGISTRATION_ENDPOINTS', "")
 
 # Path to script that contains PlantCV modules to import
 scriptPath = "PlantcvClowderIndoorAnalysis.py"
@@ -36,3 +36,8 @@ scriptPath = "PlantcvClowderIndoorAnalysis.py"
 # BETYdb instance information for submitting output CSV (skipped if betyAPI is empty)
 betyAPI = "https://terraref.ncsa.illinois.edu/bety/api/beta/traits.csv"
 betyKey = ""
+
+# Dictionary that maps {"remote Clowder source path": "local mounted path"} for streamlining Clowder downloads
+mountedPaths = {"/home/clowder/sites": "/home/ubuntu/sites"}
+
+outputDir = '/home/extractor/sites/danforth/Level_1/plantcv'

@@ -17,10 +17,26 @@ def main():
     #set logging
     logging.basicConfig(format='%(levelname)-7s : %(name)s -  %(message)s', level=logging.WARN)
     logging.getLogger('pyclowder.extractors').setLevel(logging.INFO)
+    logger = logging.getLogger('extractor')
+    logger.setLevel(logging.DEBUG)
+
+    # setup
+    extractors.setup(extractorName=extractorName,
+                     messageType=messageType,
+                     rabbitmqURL=rabbitmqURL,
+                     rabbitmqExchange=rabbitmqExchange,
+                     mountedPaths=mountedPaths)
+
+    # register extractor info
+    extractors.register_extractor(registrationEndpoints)
 
     #connect to rabbitmq
-    extractors.connect_message_bus(extractorName=extractorName, messageType=messageType, processFileFunction=process_dataset,
-        checkMessageFunction=check_message, rabbitmqExchange=rabbitmqExchange, rabbitmqURL=rabbitmqURL)
+    extractors.connect_message_bus(extractorName=extractorName,
+                                   messageType=messageType,
+                                   processFileFunction=process_dataset,
+                                   checkMessageFunction=check_message,
+                                   rabbitmqExchange=rabbitmqExchange,
+                                   rabbitmqURL=rabbitmqURL)
 
 # ----------------------------------------------------------------------
 def check_message(parameters):
@@ -46,6 +62,8 @@ def check_message(parameters):
         return False
 
 def process_dataset(parameters):
+    global outputDir
+
     # TODO: re-enable once this is merged into Clowder: https://opensource.ncsa.illinois.edu/bitbucket/projects/CATS/repos/clowder/pull-requests/883/overview
     # fetch metadata from dataset to check if we should remove existing entry for this extractor first
     # md = extractors.download_dataset_metadata_jsonld(parameters['host'], parameters['secretKey'], parameters['datasetId'], extractorName)
@@ -183,7 +201,8 @@ def process_dataset(parameters):
     trait_list = pcia.generate_traits_list(traits)
 
     # generate output CSV & send to Clowder + BETY
-    outfile = 'avg_traits.csv'
+    outfile = os.path.join(outputDir, parameters['datasetInfo']['name'], 'avg_traits.csv')
+    print("...output file: %s" % outfile)
     pcia.generate_average_csv(outfile, fields, trait_list)
     extractors.upload_file_to_dataset(outfile, parameters)
     submitToBety(outfile)

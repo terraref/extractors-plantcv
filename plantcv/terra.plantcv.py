@@ -203,6 +203,10 @@ def process_dataset(parameters):
     # generate output CSV & send to Clowder + BETY
     outfile = os.path.join(outputDir, parameters['datasetInfo']['name'], 'avg_traits.csv')
     print("...output file: %s" % outfile)
+    out_dir = outfile.replace(os.path.basename(outfile), "")
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
     pcia.generate_average_csv(outfile, fields, trait_list)
     extractors.upload_file_to_dataset(outfile, parameters)
     submitToBety(outfile)

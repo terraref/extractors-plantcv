@@ -210,7 +210,6 @@ def process_dataset(parameters):
     pcia.generate_average_csv(outfile, fields, trait_list)
     extractors.upload_file_to_dataset(outfile, parameters)
     submitToBety(outfile)
-    os.remove(outfile)
 
     # Flag dataset as processed by extractor
     metadata = {

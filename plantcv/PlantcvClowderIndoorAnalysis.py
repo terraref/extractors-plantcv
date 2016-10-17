@@ -645,7 +645,10 @@ def add_plantcv_metadata(session, url, fileid, metadata):
 ###########################################
 def average_trait(list):
     total = sum(list)
-    average = total / len(list)
+    if len(list) > 0:
+        average = total / len(list)
+    else:
+        average = -1
 
     return average
 

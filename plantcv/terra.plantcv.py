@@ -113,7 +113,7 @@ def process_dataset(parameters):
                     camera_type = mdc['camera_type']
 
                     for pth in img_paths:
-                        if re.findall(str(image_id), pth) != []:
+                        if re.findall(f['filename'], pth) != []:
                             file_objs.append({
                                 'perspective': perspective,
                                 'angle': angle,
@@ -132,7 +132,7 @@ def process_dataset(parameters):
                     perspective = raw_name[0][1].lower()
 
                     for pth in img_paths:
-                        if re.findall(str(image_id), pth) != []:
+                        if re.findall(f['filename'], pth) != []:
                             file_objs.append({
                                 'perspective': 'side-view' if perspective == 'tv' else 'top-view',
                                 'angle': angle,

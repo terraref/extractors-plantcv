@@ -95,8 +95,7 @@ def main():
             imgdate = metadata['visible/RGB'][perspective][rotation_angle]['content']['imagedate']
             if imgdate.find(" ") > -1:
                 imgdate = imgdate.replace(" ", "T")
-            if imgdate.find("-05:00") == -1:
-                imgdate += "-05:00"
+            imgdate += "-05:00"
             traits['imagedate'] = imgdate
 
             if perspective == 'side-view':

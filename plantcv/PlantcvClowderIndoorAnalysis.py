@@ -136,15 +136,11 @@ def get_traits_table():
     return (fields, traits)
 
 def generate_traits_list(traits):
-    formatted_date = traits['imagedate']
-    if formatted_date.find("-05:00") == -1:
-        formatted_date += "-05:00"
-
     # compose the summary traits
     trait_list = [  traits['plant_barcode'],
                     traits['genotype'],
                     traits['treatment'],
-                    formatted_date,
+                    traits['imagedate'],
                     average_trait(traits['sv_area']),
                     traits['tv_area'],
                     average_trait(traits['hull_area']),

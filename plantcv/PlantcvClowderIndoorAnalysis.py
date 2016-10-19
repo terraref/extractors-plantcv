@@ -113,7 +113,8 @@ def main():
 def get_traits_table():
     # Compiled traits table
     fields = ('entity', 'cultivar', 'treatment', 'local_datetime', 'sv_area', 'tv_area', 'hull_area',
-              'solidity', 'height', 'perimeter', 'access_level', 'species', 'site')
+              'solidity', 'height', 'perimeter', 'access_level', 'species', 'site',
+              'citation_author', 'citation_year', 'citation_title')
     traits = {'plant_barcode' : '',
               'genotype' : '',
               'treatment' : '',
@@ -126,7 +127,10 @@ def get_traits_table():
               'perimeter' : [],
               'access_level': '2',
               'species': 'Sorghum bicolor',
-              'site': 'Danforth Plant Science Center Bellweather Phenotyping Facility'}
+              'site': 'Danforth Plant Science Center Bellweather Phenotyping Facility',
+              'citation_author': '"Fahlgren, Noah"',
+              'citation_year': '2016',
+              'citation_title': 'Unpublished Data from Sorghum Test Runs'}
 
     return (fields, traits)
 
@@ -144,7 +148,10 @@ def generate_traits_list(traits):
                     average_trait(traits['perimeter']),
                     traits['access_level'],
                     traits['species'],
-                    traits['site']
+                    traits['site'],
+                    traits['citation_author'],
+                    traits['citation_year'],
+                    traits['citation_title']
                 ]
 
     return trait_list

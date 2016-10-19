@@ -93,7 +93,10 @@ def main():
             traits['treatment'] = metadata['visible/RGB'][perspective][rotation_angle]['content']['treatment']
             # imagedate must be in format YYYY-MM-DDTHH:MM:SS.sss e.g. "2014-06-23T16:55:57.625"
             imgdate = metadata['visible/RGB'][perspective][rotation_angle]['content']['imagedate']
-            if imgdate.find(" ") > -1: imgdate = imgdate.replace(" ", "T")
+            if imgdate.find(" ") > -1:
+                imgdate = imgdate.replace(" ", "T")
+            if imgdate.find("-05:00") == -1:
+                imgdate += "-05:00"
             traits['imagedate'] = imgdate
 
             if perspective == 'side-view':

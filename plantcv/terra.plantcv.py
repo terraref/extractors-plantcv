@@ -165,37 +165,40 @@ def process_dataset(parameters):
         nir, path1, filename1 = pcv.readimage(nir_src)
         nir2 = cv2.imread(nir_src, -1)
 
-        if i == 0:
-            vn_traits = pcia.process_tv_images_core(vis_id, img, nir_id, nir, nir2, brass_mask, traits)
-        else:
-            vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits)
+        try:
+            if i == 0:
+                vn_traits = pcia.process_tv_images_core(vis_id, img, nir_id, nir, nir2, brass_mask, traits)
+            else:
+                vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits)
 
-        print "...uploading resulting metadata"
-        # upload the individual file metadata
-        metadata = {
-            "@context": {
-                "@vocab": "https://clowder.ncsa.illinois.edu/clowder/assets/docs/api/index.html#!/files/uploadToDataset"
-            },
-            "content": vn_traits[0],
-            "agent": {
-                "@type": "cat:extractor",
-                "extractor_id": parameters['host'] + "/api/extractors/" + extractorName
+            print "...uploading resulting metadata"
+            # upload the individual file metadata
+            metadata = {
+                "@context": {
+                    "@vocab": "https://clowder.ncsa.illinois.edu/clowder/assets/docs/api/index.html#!/files/uploadToDataset"
+                },
+                "content": vn_traits[0],
+                "agent": {
+                    "@type": "cat:extractor",
+                    "extractor_id": parameters['host'] + "/api/extractors/" + extractorName
+                }
             }
-        }
-        parameters["fileid"] = vis_id
-        extractors.upload_file_metadata_jsonld(mdata=metadata, parameters=parameters)
-        metadata = {
-            "@context": {
-                "@vocab": "https://clowder.ncsa.illinois.edu/clowder/assets/docs/api/index.html#!/files/uploadToDataset"
-            },
-            "content": vn_traits[1],
-            "agent": {
-                "@type": "cat:extractor",
-                "extractor_id": parameters['host'] + "/api/extractors/" + extractorName
+            parameters["fileid"] = vis_id
+            extractors.upload_file_metadata_jsonld(mdata=metadata, parameters=parameters)
+            metadata = {
+                "@context": {
+                    "@vocab": "https://clowder.ncsa.illinois.edu/clowder/assets/docs/api/index.html#!/files/uploadToDataset"
+                },
+                "content": vn_traits[1],
+                "agent": {
+                    "@type": "cat:extractor",
+                    "extractor_id": parameters['host'] + "/api/extractors/" + extractorName
+                }
             }
-        }
-        parameters["fileid"] = nir_id
-        extractors.upload_file_metadata_jsonld(mdata=metadata, parameters=parameters)
+            parameters["fileid"] = nir_id
+            extractors.upload_file_metadata_jsonld(mdata=metadata, parameters=parameters)
+        except:
+            print "...error generating vn_traits data; no metadata uploaded"
 
     # compose the summary traits
     trait_list = pcia.generate_traits_list(traits)

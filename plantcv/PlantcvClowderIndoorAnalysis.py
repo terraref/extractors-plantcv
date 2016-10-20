@@ -115,7 +115,7 @@ def get_traits_table():
     # Compiled traits table
     fields = ('entity', 'cultivar', 'treatment', 'local_datetime', 'sv_area', 'tv_area', 'hull_area',
               'solidity', 'height', 'perimeter', 'access_level', 'species', 'site',
-              'citation_author', 'citation_year', 'citation_title')
+              'citation_author', 'citation_year', 'citation_title', 'method')
     traits = {'plant_barcode' : '',
               'genotype' : '',
               'treatment' : '',
@@ -131,7 +131,8 @@ def get_traits_table():
               'site': 'Danforth Plant Science Center Bellweather Phenotyping Facility',
               'citation_author': '"Fahlgren, Noah"',
               'citation_year': '2016',
-              'citation_title': 'Unpublished Data from Sorghum Test Runs'}
+              'citation_title': 'Unpublished Data from Sorghum Test Runs',
+              'method': 'PlantCV'}
 
     return (fields, traits)
 
@@ -152,7 +153,8 @@ def generate_traits_list(traits):
                     traits['site'],
                     traits['citation_author'],
                     traits['citation_year'],
-                    traits['citation_title']
+                    traits['citation_title'],
+                    traits['method']
                 ]
 
     return trait_list

@@ -140,7 +140,7 @@ def generate_traits_list(traits):
     # compose the summary traits
     trait_list = [  traits['plant_barcode'],
                     traits['genotype'],
-                    traits['treatment'],
+                    '"'+traits['treatment']+'"',
                     traits['imagedate'],
                     average_trait(traits['sv_area']),
                     traits['tv_area'],

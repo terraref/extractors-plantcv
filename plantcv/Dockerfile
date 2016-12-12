@@ -16,7 +16,7 @@ ENV CLOWDER_HOME="/home/clowder" \
 ### plantcv part: start
 # Install common utils & plantcv dependencies
 USER root
-RUN apt-get update && \
+RUN apt-get -y update && \
         apt-get install -y -q build-essential && \
         apt-get install -y -q wget git imagemagick \
             unzip cmake libgtk2.0-dev \
@@ -50,8 +50,9 @@ ENV LD_LIBRARY_PATH="${CLOWDER_HOME}/opencv/lib:${LD_LIBRARY_PATH}"
 
 # Install the requied software.
 USER root
-RUN apt-get install -y python-opencv opencv-data && \
-    yes | pip install virtualenv && \
+RUN apt-get -y update && \
+    apt-get install -y python-opencv opencv-data && \
+    yes | pip install virtualenv
 RUN chsh -s /bin/bash clowder
 
 # Get git source, fix the default paths.

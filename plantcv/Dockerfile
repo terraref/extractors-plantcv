@@ -61,8 +61,8 @@ RUN cd ${CLOWDER_HOME} && \
     git clone https://github.com/terraref/extractors-lemnatec-indoor.git && \
     virtualenv pyenv && \
     . pyenv/bin/activate && \
-    pip install pika requests wheel matplotlib && \
-    pip install git+https://opensource.ncsa.illinois.edu/stash/scm/cats/pyclowder.git@bugfix/CATS-554-add-pyclowder-support-for-dataset && \
+    pip install pika requests wheel matplotlib enum pyyaml && \
+    pip install git+https://opensource.ncsa.illinois.edu/stash/scm/cats/pyclowder2.git && \
     deactivate
 
 USER root

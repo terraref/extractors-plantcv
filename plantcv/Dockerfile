@@ -11,7 +11,7 @@ ENV CLOWDER_HOME="/home/clowder" \
     RABBITMQ_EXCHANGE="clowder" \
     RABBITMQ_VHOST="%2F" \
     RABBITMQ_QUEUE="terra.plantcv" \
-    MAIN_SCRIPT="terra.plantcv.py"
+    MAIN_SCRIPT="terra_plantcv.py"
 
 ### plantcv part: start
 # Install common utils & plantcv dependencies

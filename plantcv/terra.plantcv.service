@@ -1,0 +1,13 @@
+[Unit]
+Description=PlantCV Extractor
+After=network.target
+
+[Service]
+User=extractor
+Group=users
+Restart=on-failure
+WorkingDirectory=/home/extractor/extractors-lemnatec-indoor/plantcv
+ExecStart=/usr/bin/python /home/extractor/extractors-lemnatec-indoor/plantcv/terra_plantcv.py
+
+[Install]
+WantedBy=multi-user.target

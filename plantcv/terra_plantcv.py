@@ -3,50 +3,42 @@
 import re
 import os
 import logging
-import requests
 import json
 
-from pyclowder.extractors import Extractor
 from pyclowder.utils import CheckMessage
-import pyclowder.files
-import pyclowder.datasets
+from pyclowder.datasets import download_metadata as download_ds_metadata, \
+    upload_metadata as upload_ds_metadata
+from pyclowder.files import download_metadata as download_file_metadata, \
+    upload_metadata as upload_file_metadata, upload_to_dataset
+from terrautils.extractors import TerrarefExtractor, is_latest_file, build_metadata
+from terrautils.betydb import add_arguments, submit_traits
 
 import PlantcvClowderIndoorAnalysis as pcia
 import cv2
 import plantcv as pcv
 
-class PlantCVIndoorAnalysis(Extractor):
-    def __init__(self):
-        Extractor.__init__(self)
 
-        # add any additional arguments to parser
-        # self.parser.add_argument('--max', '-m', type=int, nargs='?', default=-1,
-        #                          help='maximum number (default=-1)')
-        self.parser.add_argument('--output', '-o', dest="output_dir", type=str, nargs='?',
-                                 default="/home/extractor/sites/danforth/Level_1/plantcv",
-                                 help="root directory where timestamp & output directories will be created")
-        self.parser.add_argument('--betyURL', dest="bety_url", type=str, nargs='?',
-                                 default="https://terraref.ncsa.illinois.edu/bety/api/beta/traits.csv",
-                                 help="traits API endpoint of BETY instance that outputs should be posted to")
-        self.parser.add_argument('--betyKey', dest="bety_key", type=str, nargs='?', default=False,
-                                 help="API key for BETY instance specified by betyURL")
+def add_local_arguments(parser):
+    # add any additional arguments to parser
+    add_arguments()
+
+class PlantCVIndoorAnalysis(TerrarefExtractor):
+    def __init__(self):
+        super(PlantCVIndoorAnalysis, self).__init__()
+
+        add_local_arguments(self.parser)
 
         # parse command line and load default logging configuration
-        self.setup()
-
-        # setup logging for the exctractor
-        logging.getLogger('pyclowder').setLevel(logging.DEBUG)
-        logging.getLogger('__main__').setLevel(logging.DEBUG)
+        self.setup(sensor='plantcv')
 
         # assign other arguments
-        self.output_dir = self.args.output_dir
         self.bety_url = self.args.bety_url
         self.bety_key = self.args.bety_key
 
     def check_message(self, connector, host, secret_key, resource, parameters):
         # For now if the dataset already has metadata from this extractor, don't recreate
-        md = pyclowder.datasets.download_metadata(connector, host, secret_key,
-                                                  resource['id'], self.extractor_info['name'])
+        md = download_ds_metadata(connector, host, secret_key,
+                               resource['id'], self.extractor_info['name'])
         if len(md) > 0:
             for m in md:
                 if 'agent' in m and 'name' in m['agent']:
@@ -67,6 +59,8 @@ class PlantCVIndoorAnalysis(Extractor):
             return CheckMessage.ignore
 
     def process_message(self, connector, host, secret_key, resource, parameters):
+        self.start_message()
+
         (fields, traits) = pcia.get_traits_table()
 
         # get imgs paths, filter out the json paths
@@ -96,7 +90,7 @@ class PlantCVIndoorAnalysis(Extractor):
             found_info = False
             image_id = f['id']
             # Get from file metadata if possible
-            file_md = pyclowder.files.download_metadata(connector, host, secret_key, f['id'])
+            file_md = download_file_metadata(connector, host, secret_key, f['id'])
             for md in file_md:
                 if 'content' in md:
                     mdc = md['content']
@@ -170,26 +164,10 @@ class PlantCVIndoorAnalysis(Extractor):
 
                 logging.info("...uploading resulting metadata")
                 # upload the individual file metadata
-                metadata = {
-                    # TODO: Generate JSON-LD context for additional fields
-                    "@context": ["https://clowder.ncsa.illinois.edu/contexts/metadata.jsonld"],
-                    "content": vn_traits[0],
-                    "agent": {
-                        "@type": "cat:extractor",
-                        "extractor_id": host + "/api/extractors/" + self.extractor_info['name']
-                    }
-                }
-                pyclowder.files.upload_metadata(connector, host, secret_key, vis_id, metadata)
-                metadata = {
-                    # TODO: Generate JSON-LD context for additional fields
-                    "@context": ["https://clowder.ncsa.illinois.edu/contexts/metadata.jsonld"],
-                    "content": vn_traits[1],
-                    "agent": {
-                        "@type": "cat:extractor",
-                        "extractor_id": host + "/api/extractors/" + self.extractor_info['name']
-                    }
-                }
-                pyclowder.files.upload_metadata(connector, host, secret_key, nir_id, metadata)
+                metadata = build_metadata(host, self.extractor_info, nir_id, vn_traits[0], 'file')
+                upload_file_metadata(connector, host, secret_key, vis_id, metadata)
+                metadata = build_metadata(host, self.extractor_info, nir_id, vn_traits[1], 'file')
+                upload_file_metadata(connector, host, secret_key, nir_id, metadata)
             except:
                 logging.error("...error generating vn_traits data; no metadata uploaded")
 
@@ -197,40 +175,16 @@ class PlantCVIndoorAnalysis(Extractor):
         trait_list = pcia.generate_traits_list(traits)
 
         # generate output CSV & send to Clowder + BETY
-        outfile = os.path.join(self.output_dir, resource['dataset_info']['name'], 'avg_traits.csv')
-        logging.debug("...output file: %s" % outfile)
-        out_dir = outfile.replace(os.path.basename(outfile), "")
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-
-        pcia.generate_average_csv(outfile, fields, trait_list)
-        pyclowder.files.upload_to_dataset(connector, host, secret_key, resource['id'], outfile)
-        submitToBety(self.bety_url, self.bety_key, outfile)
+        tmp_csv = 'avg_traits.csv'
+        pcia.generate_average_csv(tmp_csv, fields, trait_list)
+        submit_traits(tmp_csv, self.bety_key)
 
         # Flag dataset as processed by extractor
-        metadata = {
-            # TODO: Generate JSON-LD context for additional fields
-            "@context": ["https://clowder.ncsa.illinois.edu/contexts/metadata.jsonld"],
-            "dataset_id": resource['id'],
-            "content": {"status": "COMPLETED"},
-            "agent": {
-                "@type": "cat:extractor",
-                "extractor_id": host + "/api/extractors/" + self.extractor_info['name']
-            }
-        }
-        pyclowder.datasets.upload_metadata(connector, host, secret_key, resource['id'], metadata)
+        metadata = build_metadata(host, self.extractor_info, resource['id'],
+                                  {"status": "COMPLETED"}, 'dataset')
+        upload_ds_metadata(connector, host, secret_key, resource['id'], metadata)
 
-def submitToBety(bety_url, bety_key, csvfile):
-    if bety_url != "":
-        sess = requests.Session()
-        r = sess.post("%s?key=%s" % (bety_url, bety_key),
-                  data=file(csvfile, 'rb').read(),
-                  headers={'Content-type': 'text/csv'})
-
-        if r.status_code == 200 or r.status_code == 201:
-            logging.info("...CSV successfully uploaded to BETYdb.")
-        else:
-            logging.error("...error uploading CSV to BETYdb %s" % r.status_code)
+        self.end_message()
 
 if __name__ == "__main__":
     extractor = PlantCVIndoorAnalysis()

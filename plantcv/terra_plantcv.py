@@ -190,8 +190,9 @@ class PlantCVIndoorAnalysis(Extractor):
                     }
                 }
                 pyclowder.files.upload_metadata(connector, host, secret_key, nir_id, metadata)
-            except:
+            except Exception as e:
                 logging.error("...error generating vn_traits data; no metadata uploaded")
+                logging.error(e)
 
         # compose the summary traits
         trait_list = pcia.generate_traits_list(traits)

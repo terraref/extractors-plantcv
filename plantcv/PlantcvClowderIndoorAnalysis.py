@@ -1,6 +1,7 @@
 # PlantCV analysis code package for TERRA-REF indoor system analysis
 
 from __future__ import print_function
+import sys
 import plantcv as pcv
 
 
@@ -197,7 +198,7 @@ def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, de
     device, nir_combined, nir_combinedmask = pcv.object_composition(nir_rgb, nir_objects, nir_hierarchy, device, debug)
 
     # ###################################### Analysis #############################################
-    device, nhist_header, nhist_data, nir_imgs = pcv.analyze_NIR_intensity(nir_cv2, nir_id, nir_combinedmask, 256,
+    device, nhist_header, nhist_data, nir_imgs = pcv.analyze_NIR_intensity(nir_cv2, nir_rgb, nir_combinedmask, 256,
                                                                            device, False, debug)
     device, nshape_header, nshape_data, nir_shape = pcv.analyze_object(nir_cv2, nir_id, nir_combined, nir_combinedmask,
                                                                        device, debug)
@@ -320,7 +321,7 @@ def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask
     device, nmask = pcv.resize(f_mask, 0.116148, 0.116148, device, debug)
 
     # position, and crop mask
-    device, newmask = pcv.crop_position_mask(nir_rgb, nmask, device, 15, 5, "top", "right", debug)
+    device, newmask = pcv.crop_position_mask(nir_cv2, nmask, device, 15, 5, "top", "right", debug)
 
     # Identify objects
     device, nir_objects, nir_hierarchy = pcv.find_objects(nir_rgb, newmask, device, debug)
@@ -330,7 +331,7 @@ def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask
 
     # ###################################### Analysis #############################################
 
-    device, nhist_header, nhist_data, nir_imgs = pcv.analyze_NIR_intensity(nir_cv2, nir_id, nir_combinedmask, 256,
+    device, nhist_header, nhist_data, nir_imgs = pcv.analyze_NIR_intensity(nir_cv2, nir_rgb, nir_combinedmask, 256,
                                                                            device, False, debug)
     device, nshape_header, nshape_data, nir_shape = pcv.analyze_object(nir_cv2, nir_id, nir_combined, nir_combinedmask,
                                                                        device, debug)

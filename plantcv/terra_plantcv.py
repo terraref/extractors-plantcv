@@ -131,7 +131,7 @@ class PlantCVIndoorAnalysis(Extractor):
                         for pth in img_paths:
                             if re.findall(f['filename'], pth) != []:
                                 file_objs.append({
-                                    'perspective': 'side-view' if perspective == 'tv' else 'top-view',
+                                    'perspective': 'side-view' if perspective == 'sv' else 'top-view',
                                     'angle': angle,
                                     'camera_type': 'visible/RGB' if camera_type == 'vis' else 'near-infrared',
                                     'image_path': pth,

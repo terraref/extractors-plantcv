@@ -1,7 +1,6 @@
 # PlantCV analysis code package for TERRA-REF indoor system analysis
 
 from __future__ import print_function
-import sys
 import plantcv as pcv
 
 
@@ -75,7 +74,36 @@ def serialize_color_data(input_list):
 
 
 # PlantCV code for processing side-view images
-def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, debug=None):
+def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, experiment, debug=None):
+    if experiment == "Pilot_060214":
+        vn_traits = process_sv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, debug)
+    else:
+        raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))
+    return vn_traits
+
+
+# PlantCV code for processing top-view images
+def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, experiment, debug=None):
+    if experiment == "Pilot_060214":
+        vn_traits = process_tv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, debug)
+    else:
+        raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))
+    return vn_traits
+
+
+# Calculate the average value of a trait list
+def average_trait(input_list):
+    total = sum(input_list)
+    if len(input_list) > 0:
+        average = total / len(input_list)
+    else:
+        average = -1
+
+    return average
+
+
+# PlantCV code for processing side-view images from the experiment Pilot_060214
+def process_sv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, debug=None):
     # Pipeline step
     device = 0
 
@@ -219,8 +247,8 @@ def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, de
     return [vis_traits, nir_traits]
 
 
-# PlantCV code for processing top-view images
-def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, debug=None):
+# PlantCV code for processing top-view images from the experiment Pilot_060214
+def process_tv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, debug=None):
     device = 0
 
     # Convert RGB to HSV and extract the Saturation channel
@@ -346,14 +374,3 @@ def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask
     traits['tv_area'] = vis_traits['area']
 
     return [vis_traits, nir_traits]
-
-
-# Calculate the average value of a trait list
-def average_trait(input_list):
-    total = sum(input_list)
-    if len(input_list) > 0:
-        average = total / len(input_list)
-    else:
-        average = -1
-
-    return average

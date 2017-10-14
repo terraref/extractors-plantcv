@@ -101,23 +101,27 @@ class PlantCVIndoorAnalysis(Extractor):
                 if 'content' in md:
                     mdc = md['content']
                     if ('rotation_angle' in mdc) and ('perspective' in mdc) and ('camera_type' in mdc):
-                        found_info = True
-                        # perspective = 'side-view' / 'top-view'
-                        perspective = mdc['perspective']
-                        # angle = -1, 0, 90, 180, 270; set top-view angle to be -1 for later sorting
-                        angle = mdc['rotation_angle'] if perspective != 'top-view' else -1
-                        # camera_type = 'visible/RGB' / 'near-infrared'
-                        camera_type = mdc['camera_type']
+                        if ('experiment_id' in mdc):
+                            found_info = True
+                            # experiment ID determines what PlantCV code gets executed
+                            experiment = mdc['experiment_id']
+                            # perspective = 'side-view' / 'top-view'
+                            perspective = mdc['perspective']
+                            # angle = -1, 0, 90, 180, 270; set top-view angle to be -1 for later sorting
+                            angle = mdc['rotation_angle'] if perspective != 'top-view' else -1
+                            # camera_type = 'visible/RGB' / 'near-infrared'
+                            camera_type = mdc['camera_type']
 
-                        for pth in img_paths:
-                            if re.findall(f['filename'], pth) != []:
-                                file_objs.append({
-                                    'perspective': perspective,
-                                    'angle': angle,
-                                    'camera_type': camera_type,
-                                    'image_path': pth,
-                                    'image_id': image_id
-                                })
+                            for pth in img_paths:
+                                if re.findall(f['filename'], pth) != []:
+                                    file_objs.append({
+                                        'perspective': perspective,
+                                        'angle': angle,
+                                        'camera_type': camera_type,
+                                        'image_path': pth,
+                                        'image_id': image_id,
+                                        'experiment_id': experiment
+                                    })
 
             if not found_info:
                 # Get from filename if no metadata is found
@@ -135,7 +139,8 @@ class PlantCVIndoorAnalysis(Extractor):
                                     'angle': angle,
                                     'camera_type': 'visible/RGB' if camera_type == 'vis' else 'near-infrared',
                                     'image_path': pth,
-                                    'image_id': image_id
+                                    'image_id': image_id,
+                                    'experiment_id': 'unknown'
                                 })
 
         # sort file objs by angle
@@ -148,11 +153,13 @@ class PlantCVIndoorAnalysis(Extractor):
                 nir_src = file_objs[i+1]['image_path']
                 vis_id = file_objs[i]['image_id']
                 nir_id = file_objs[i+1]['image_id']
+                experiment_id = file_objs[i]['experiment_id']
             else:
                 vis_src = file_objs[i+1]['image_path']
                 nir_src = file_objs[i]['image_path']
                 vis_id = file_objs[i+1]['image_id']
                 nir_id = file_objs[i]['image_id']
+                experiment_id = file_objs[i+1]['experiment_id']
             logging.info('...processing: %s + %s' % (os.path.basename(vis_src), os.path.basename(nir_src)))
 
             # Read VIS image
@@ -164,9 +171,10 @@ class PlantCVIndoorAnalysis(Extractor):
 
             try:
                 if i == 0:
-                    vn_traits = pcia.process_tv_images_core(vis_id, img, nir_id, nir, nir2, brass_mask, traits)
+                    vn_traits = pcia.process_tv_images_core(vis_id, img, nir_id, nir, nir2, brass_mask, traits,
+                                                            experiment_id)
                 else:
-                    vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits)
+                    vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits, experiment_id)
 
                 logging.info("...uploading resulting metadata")
                 # upload the individual file metadata

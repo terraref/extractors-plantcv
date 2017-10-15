@@ -120,7 +120,8 @@ class PlantCVIndoorAnalysis(Extractor):
                                         'camera_type': camera_type,
                                         'image_path': pth,
                                         'image_id': image_id,
-                                        'experiment_id': experiment
+                                        'experiment_id': experiment,
+                                        'filename': f['filename']
                                     })
 
             if not found_info:
@@ -140,7 +141,8 @@ class PlantCVIndoorAnalysis(Extractor):
                                 'camera_type': 'visible/RGB' if camera_type == 'vis' else 'near-infrared',
                                 'image_path': pth,
                                 'image_id': image_id,
-                                'experiment_id': 'unknown'
+                                'experiment_id': 'unknown',
+                                'filename': f['filename']
                             })
 
         # sort file objs by angle
@@ -154,12 +156,16 @@ class PlantCVIndoorAnalysis(Extractor):
                 vis_id = file_objs[i]['image_id']
                 nir_id = file_objs[i + 1]['image_id']
                 experiment_id = file_objs[i]['experiment_id']
+                vis_filename = file_objs[i]['filename']
+                nir_filename = file_objs[i + 1]['filename']
             else:
                 vis_src = file_objs[i + 1]['image_path']
                 nir_src = file_objs[i]['image_path']
                 vis_id = file_objs[i + 1]['image_id']
                 nir_id = file_objs[i]['image_id']
                 experiment_id = file_objs[i + 1]['experiment_id']
+                vis_filename = file_objs[i + 1]['filename']
+                nir_filename = file_objs[i]['filename']
             logging.info('...processing: %s + %s' % (os.path.basename(vis_src), os.path.basename(nir_src)))
 
             # Read VIS image
@@ -170,11 +176,14 @@ class PlantCVIndoorAnalysis(Extractor):
             nir2 = cv2.imread(nir_src, -1)
 
             try:
+                vis_out = os.path.join(self.output_dir, resource['dataset_info']['name'], vis_filename)
+                nir_out = os.path.join(self.output_dir, resource['dataset_info']['name'], nir_filename)
                 if i == 0:
                     vn_traits = pcia.process_tv_images_core(vis_id, img, nir_id, nir, nir2, brass_mask, traits,
-                                                            experiment_id)
+                                                            experiment_id, vis_out, nir_out)
                 else:
-                    vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits, experiment_id)
+                    vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits, experiment_id,
+                                                            vis_out, nir_out)
 
                 logging.info("...uploading resulting metadata")
                 # upload the individual file metadata
@@ -198,6 +207,10 @@ class PlantCVIndoorAnalysis(Extractor):
                     }
                 }
                 pyclowder.files.upload_metadata(connector, host, secret_key, nir_id, metadata)
+
+                # Add PlantCV analysis images to dataset
+                for image in vn_traits[2]:
+                    pyclowder.files.upload_to_dataset(connector, host, secret_key, resource['id'], image)
             except Exception as e:
                 logging.error("...error generating vn_traits data; no metadata uploaded")
                 logging.error(e)

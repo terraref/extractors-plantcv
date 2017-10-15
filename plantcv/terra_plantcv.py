@@ -62,7 +62,7 @@ class PlantCVIndoorAnalysis(Extractor):
             if raw_name:
                 relevantFiles += 1
 
-        if relevantFiles >= 10:
+        if relevantFiles >= 6:
             return CheckMessage.download
         else:
             return CheckMessage.ignore

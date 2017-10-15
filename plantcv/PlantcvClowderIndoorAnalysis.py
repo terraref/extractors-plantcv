@@ -1,7 +1,6 @@
 # PlantCV analysis code package for TERRA-REF indoor system analysis
 
 from __future__ import print_function
-import os
 import plantcv as pcv
 import numpy as np
 import cv2
@@ -82,6 +81,8 @@ def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, ex
         vn_traits = process_sv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     elif experiment == "TM015_F_051616":
         vn_traits = process_sv_images_lt1a(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
+    elif experiment == "TM016_F_052716":
+        vn_traits = process_sv_images_lt1b(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     else:
         raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))
     return vn_traits
@@ -92,7 +93,7 @@ def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask
     if experiment == "Pilot_060214":
         vn_traits = process_tv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, vis_out,
                                             nir_out)
-    elif experiment == "TM015_F_051616":
+    elif experiment == "TM015_F_051616" or experiment == "TM016_F_052716":
         vn_traits = process_tv_images_lt1(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     else:
         raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))
@@ -465,7 +466,7 @@ def process_tv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mas
     return [vis_traits, nir_traits, output_images]
 
 
-# PlantCV code for processing side-view images from the experiment Pilot_060214
+# PlantCV code for processing side-view images from the experiment TM015_F_051616
 def process_sv_images_lt1a(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out):
     # Pipeline step
     device = 0
@@ -611,7 +612,7 @@ def process_sv_images_lt1a(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vi
         return []
 
 
-# PlantCV code for processing top-view images from the experiment Pilot_060214
+# PlantCV code for processing top-view images from the experiment TM015_F_051616 or TM016_F_052716
 def process_tv_images_lt1(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out):
     device = 0
     debug = None
@@ -764,6 +765,152 @@ def process_tv_images_lt1(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis
         traits['tv_area'] = vis_traits['area']
         output_images = []
         for row in shape_img + color_img + nir_imgs:
+            output_images.append(row[2])
+        return [vis_traits, nir_traits, output_images]
+    else:
+        return []
+
+
+# PlantCV code for processing side-view images from the experiment TM016_F_052716
+def process_sv_images_lt1b(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out):
+    # Pipeline step
+    device = 0
+    debug = None
+
+    # Convert RGB to LAB and extract the Blue-Yellow channel
+    device, blue_channel = pcv.rgb2gray_lab(img=vis_img, channel="b", device=device, debug=debug)
+
+    # Threshold the blue image using the triangle autothreshold method
+    device, blue_tri = pcv.triangle_auto_threshold(device=device, img=blue_channel, maxvalue=255, object_type="light",
+                                                   xstep=1, debug=debug)
+
+    # Extract core plant region from the image to preserve delicate plant features during filtering
+    device += 1
+    plant_region = blue_tri[0:1750, 600:2080]
+    if debug is not None:
+        pcv.print_image(filename=str(device) + "_extract_plant_region.png", img=plant_region)
+
+    # Use a Gaussian blur to disrupt the strong edge features in the cabinet
+    device, blur_gaussian = pcv.gaussian_blur(device=device, img=blue_tri, ksize=(3, 3), sigmax=0, sigmay=None,
+                                              debug=debug)
+
+    # Threshold the blurred image to remove features that were blurred
+    device, blur_thresholded = pcv.binary_threshold(img=blur_gaussian, threshold=250, maxValue=255, object_type="light",
+                                                    device=device, debug=debug)
+
+    # Add the plant region back in to the filtered image
+    device += 1
+    blur_thresholded[0:1750, 600:2080] = plant_region
+    if debug is not None:
+        pcv.print_image(filename=str(device) + "_replace_plant_region.png", img=blur_thresholded)
+
+    # Fill small noise
+    device, blue_fill_50 = pcv.fill(img=np.copy(blur_thresholded), mask=np.copy(blur_thresholded), size=50,
+                                    device=device, debug=debug)
+
+    # Identify objects
+    device, contours, contour_hierarchy = pcv.find_objects(img=vis_img, mask=blue_fill_50, device=device, debug=debug)
+
+    # Define ROI
+    device, roi, roi_hierarchy = pcv.define_roi(img=vis_img, shape="rectangle", device=device, roi=None,
+                                                roi_input="default", debug=debug, adjust=True, x_adj=565, y_adj=0,
+                                                w_adj=-490, h_adj=-250)
+
+    # Decide which objects to keep
+    device, roi_contours, roi_contour_hierarchy, _, _ = pcv.roi_objects(img=vis_img, roi_type="partial",
+                                                                        roi_contour=roi, roi_hierarchy=roi_hierarchy,
+                                                                        object_contour=contours,
+                                                                        obj_hierarchy=contour_hierarchy, device=device,
+                                                                        debug=debug)
+
+    # If there are no contours left we cannot measure anything
+    if len(roi_contours) > 0:
+        # Object combine kept objects
+        device, plant_contour, plant_mask = pcv.object_composition(img=vis_img, contours=roi_contours,
+                                                                   hierarchy=roi_contour_hierarchy, device=device,
+                                                                   debug=debug)
+
+        # Find shape properties, output shape image (optional)
+        device, shape_header, shape_data, shape_img = pcv.analyze_object(img=vis_img, imgname=vis_id, obj=plant_contour,
+                                                                         mask=plant_mask, device=device,
+                                                                         debug=debug, filename=vis_out)
+
+        # Shape properties relative to user boundary line (optional)
+        device, boundary_header, boundary_data, boundary_img = pcv.analyze_bound(img=vis_img, imgname=vis_id,
+                                                                                 obj=plant_contour, mask=plant_mask,
+                                                                                 line_position=440, device=device,
+                                                                                 debug=debug, filename=vis_out)
+
+        # Determine color properties: Histograms, Color Slices and Pseudocolored Images,
+        # output color analyzed images (optional)
+        device, color_header, color_data, color_img = pcv.analyze_color(img=vis_img, imgname=vis_id, mask=plant_mask,
+                                                                        bins=256, device=device, debug=debug,
+                                                                        hist_plot_type=None, pseudo_channel="v",
+                                                                        pseudo_bkg="img", resolution=300,
+                                                                        filename=vis_out)
+
+        # Output shape and color data
+        vis_traits = {}
+        for i in range(1, len(shape_header)):
+            vis_traits[shape_header[i]] = shape_data[i]
+        for i in range(1, len(boundary_header)):
+            vis_traits[boundary_header[i]] = boundary_data[i]
+        for i in range(2, len(color_header)):
+            vis_traits[color_header[i]] = serialize_color_data(color_data[i])
+
+        # Make mask glovelike in proportions via dilation
+        device, d_mask = pcv.dilate(plant_mask, kernel=1, i=0, device=device, debug=debug)
+
+        # Resize mask
+        prop2, prop1 = conv_ratio()
+        device, nmask = pcv.resize(img=d_mask, resize_x=prop1, resize_y=prop2, device=device, debug=debug)
+
+        # Convert the resized mask to a binary mask
+        device, bmask = pcv.binary_threshold(img=nmask, threshold=0, maxValue=255, object_type="light", device=device,
+                                             debug=debug)
+
+        device, crop_img = crop_sides_equally(mask=bmask, nir=nir_cv2, device=device, debug=debug)
+
+        # position, and crop mask
+        device, newmask = pcv.crop_position_mask(img=nir_cv2, mask=crop_img, device=device, x=34, y=9, v_pos="top",
+                                                 h_pos="right", debug=debug)
+
+        # Identify objects
+        device, nir_objects, nir_hierarchy = pcv.find_objects(img=nir_rgb, mask=newmask, device=device,
+                                                              debug=debug)
+
+        # Object combine kept objects
+        device, nir_combined, nir_combinedmask = pcv.object_composition(img=nir_rgb, contours=nir_objects,
+                                                                        hierarchy=nir_hierarchy, device=device,
+                                                                        debug=debug)
+
+        # Analyze NIR signal data
+        device, nhist_header, nhist_data, nir_imgs = pcv.analyze_NIR_intensity(img=nir_cv2, rgbimg=nir_rgb,
+                                                                               mask=nir_combinedmask, bins=256,
+                                                                               device=device, histplot=False,
+                                                                               debug=debug, filename=nir_out)
+
+        # Analyze the shape of the plant contour from the NIR image
+        device, nshape_header, nshape_data, nir_shape = pcv.analyze_object(img=nir_cv2, imgname=nir_id,
+                                                                           obj=nir_combined, mask=nir_combinedmask,
+                                                                           device=device, debug=debug,
+                                                                           filename=nir_out)
+
+        nir_traits = {}
+        for i in range(1, len(nshape_header)):
+            nir_traits[nshape_header[i]] = nshape_data[i]
+        for i in range(2, len(nhist_header)):
+            nir_traits[nhist_header[i]] = serialize_color_data(nhist_data[i])
+
+        # Add data to traits table
+        traits['sv_area'].append(vis_traits['area'])
+        traits['hull_area'].append(vis_traits['hull-area'])
+        traits['solidity'].append(vis_traits['solidity'])
+        traits['height'].append(vis_traits['height_above_bound'])
+        traits['perimeter'].append(vis_traits['perimeter'])
+
+        output_images = []
+        for row in shape_img + [boundary_img] + color_img + nir_imgs:
             output_images.append(row[2])
         return [vis_traits, nir_traits, output_images]
     else:

@@ -15,6 +15,7 @@ import PlantcvClowderIndoorAnalysis as pcia
 import cv2
 import plantcv as pcv
 
+
 class PlantCVIndoorAnalysis(Extractor):
     def __init__(self):
         Extractor.__init__(self)
@@ -57,8 +58,8 @@ class PlantCVIndoorAnalysis(Extractor):
         # Expect at least 10 relevant files to execute this processing
         relevantFiles = 0
         for f in resource['files']:
-            raw_name = re.findall(r"(VIS|NIR|vis|nir)_(SV|TV|sv|tv)(_\d+)*" , f["filename"])
-            if raw_name != []:
+            raw_name = re.findall(r"(VIS|NIR|vis|nir)_(SV|TV|sv|tv)(_\d+)*", f["filename"])
+            if raw_name:
                 relevantFiles += 1
 
         if relevantFiles >= 10:
@@ -89,7 +90,6 @@ class PlantCVIndoorAnalysis(Extractor):
                                     else:
                                         traits[fld] = md['content'][fld]
 
-
         # build list of file descriptor dictionaries with sensor info
         file_objs = []
         for f in resource['files']:
@@ -101,7 +101,7 @@ class PlantCVIndoorAnalysis(Extractor):
                 if 'content' in md:
                     mdc = md['content']
                     if ('rotation_angle' in mdc) and ('perspective' in mdc) and ('camera_type' in mdc):
-                        if ('experiment_id' in mdc):
+                        if 'experiment_id' in mdc:
                             found_info = True
                             # experiment ID determines what PlantCV code gets executed
                             experiment = mdc['experiment_id']
@@ -113,7 +113,7 @@ class PlantCVIndoorAnalysis(Extractor):
                             camera_type = mdc['camera_type']
 
                             for pth in img_paths:
-                                if re.findall(f['filename'], pth) != []:
+                                if re.findall(f['filename'], pth):
                                     file_objs.append({
                                         'perspective': perspective,
                                         'angle': angle,
@@ -125,23 +125,23 @@ class PlantCVIndoorAnalysis(Extractor):
 
             if not found_info:
                 # Get from filename if no metadata is found
-                raw_name = re.findall(r"(VIS|NIR|vis|nir)_(SV|TV|sv|tv)(_\d+)*" , f["filename"])
-                if raw_name != []:
-                        raw_int = re.findall('\d+', raw_name[0][2])
-                        angle = -1 if raw_int == [] else int(raw_int[0]) # -1 for top-view, else angle
-                        camera_type = raw_name[0][0]
-                        perspective = raw_name[0][1].lower()
+                raw_name = re.findall(r"(VIS|NIR|vis|nir)_(SV|TV|sv|tv)(_\d+)*", f["filename"])
+                if raw_name:
+                    raw_int = re.findall('\d+', raw_name[0][2])
+                    angle = -1 if raw_int == [] else int(raw_int[0])  # -1 for top-view, else angle
+                    camera_type = raw_name[0][0]
+                    perspective = raw_name[0][1].lower()
 
-                        for pth in img_paths:
-                            if re.findall(f['filename'], pth) != []:
-                                file_objs.append({
-                                    'perspective': 'side-view' if perspective == 'sv' else 'top-view',
-                                    'angle': angle,
-                                    'camera_type': 'visible/RGB' if camera_type == 'vis' else 'near-infrared',
-                                    'image_path': pth,
-                                    'image_id': image_id,
-                                    'experiment_id': 'unknown'
-                                })
+                    for pth in img_paths:
+                        if re.findall(f['filename'], pth):
+                            file_objs.append({
+                                'perspective': 'side-view' if perspective == 'sv' else 'top-view',
+                                'angle': angle,
+                                'camera_type': 'visible/RGB' if camera_type == 'vis' else 'near-infrared',
+                                'image_path': pth,
+                                'image_id': image_id,
+                                'experiment_id': 'unknown'
+                            })
 
         # sort file objs by angle
         file_objs = sorted(file_objs, key=lambda k: k['angle'])
@@ -150,16 +150,16 @@ class PlantCVIndoorAnalysis(Extractor):
         for i in [x for x in range(len(file_objs)) if x % 2 == 0]:
             if file_objs[i]['camera_type'] == 'visible/RGB':
                 vis_src = file_objs[i]['image_path']
-                nir_src = file_objs[i+1]['image_path']
+                nir_src = file_objs[i + 1]['image_path']
                 vis_id = file_objs[i]['image_id']
-                nir_id = file_objs[i+1]['image_id']
+                nir_id = file_objs[i + 1]['image_id']
                 experiment_id = file_objs[i]['experiment_id']
             else:
-                vis_src = file_objs[i+1]['image_path']
+                vis_src = file_objs[i + 1]['image_path']
                 nir_src = file_objs[i]['image_path']
-                vis_id = file_objs[i+1]['image_id']
+                vis_id = file_objs[i + 1]['image_id']
                 nir_id = file_objs[i]['image_id']
-                experiment_id = file_objs[i+1]['experiment_id']
+                experiment_id = file_objs[i + 1]['experiment_id']
             logging.info('...processing: %s + %s' % (os.path.basename(vis_src), os.path.basename(nir_src)))
 
             # Read VIS image
@@ -229,17 +229,19 @@ class PlantCVIndoorAnalysis(Extractor):
         }
         pyclowder.datasets.upload_metadata(connector, host, secret_key, resource['id'], metadata)
 
+
 def submitToBety(bety_url, bety_key, csvfile):
     if bety_url != "":
         sess = requests.Session()
         r = sess.post("%s?key=%s" % (bety_url, bety_key),
-                  data=file(csvfile, 'rb').read(),
-                  headers={'Content-type': 'text/csv'})
+                      data=file(csvfile, 'rb').read(),
+                      headers={'Content-type': 'text/csv'})
 
         if r.status_code == 200 or r.status_code == 201:
             logging.info("...CSV successfully uploaded to BETYdb.")
         else:
             logging.error("...error uploading CSV to BETYdb %s" % r.status_code)
+
 
 if __name__ == "__main__":
     extractor = PlantCVIndoorAnalysis()

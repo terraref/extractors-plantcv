@@ -24,8 +24,8 @@ def get_traits_table():
               'perimeter': [],
               'access_level': '2',
               'species': 'Sorghum bicolor',
-              'site': 'Danforth Plant Science Center Bellweather Phenotyping Facility',
-              'citation_author': '"Fahlgren, Noah"',
+              'site': 'Donald Danforth Plant Science Center Bellwether Phenotyping Facility',
+              'citation_author': '"Shakoor, Nadia"',
               'citation_year': '2016',
               'citation_title': 'Unpublished Data from Sorghum Test Runs',
               'method': 'PlantCV'}
@@ -80,8 +80,14 @@ def process_sv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, ex
     if experiment == "Pilot_060214":
         vn_traits = process_sv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     elif experiment == "TM015_F_051616":
+        traits["citation_year"] = 2016
+        traits["citation_title"] = "Data From TERRA-REF Experiment LT1: Sorghum Bioenergy Association Panel Response " \
+                                   "to Drought"
         vn_traits = process_sv_images_lt1a(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     elif experiment == "TM016_F_052716":
+        traits["citation_year"] = 2016
+        traits["citation_title"] = "Data From TERRA-REF Experiment LT1: Sorghum Bioenergy Association Panel Response " \
+                                   "to Drought"
         vn_traits = process_sv_images_lt1b(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     else:
         raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))
@@ -94,6 +100,9 @@ def process_tv_images_core(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask
         vn_traits = process_tv_images_pilot(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, brass_mask, traits, vis_out,
                                             nir_out)
     elif experiment == "TM015_F_051616" or experiment == "TM016_F_052716":
+        traits["citation_year"] = 2016
+        traits["citation_title"] = "Data From TERRA-REF Experiment LT1: Sorghum Bioenergy Association Panel Response " \
+                                   "to Drought"
         vn_traits = process_tv_images_lt1(vis_id, vis_img, nir_id, nir_rgb, nir_cv2, traits, vis_out, nir_out)
     else:
         raise ValueError("Experiment {0} is not a valid experiment_id.".format(experiment))

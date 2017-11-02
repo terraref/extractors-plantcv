@@ -15,23 +15,22 @@ if [ "$RABBITMQ_URI" == "" ]; then
 fi
 
 
-cd $EXTRACTOR_HOME
+if [ "$1" = 'extractor' ]; then
+    cd /home/extractor
 
-# update extractor code everytime we build
-git pull
+    # Set plantcv env var
+    /bin/sed -i -e "s#plantcvOutputDir =.*#plantcvOutputDir = '/home/extractor/plantcv-output'#" config.py
 
-# Set plantcv env var
-/bin/sed -i -e "s#plantcvOutputDir =.*#plantcvOutputDir = '${CLOWDER_HOME}/plantcv-output'#" config.py
+    # fix plancv bugs in analyze_color()
+    # analyze_color takes 11 args, but image_analysis scripts put 12
+    for d in nir_sv vis_sv  vis_tv
+    do
+      for f in `ls $/home/extractor/plantcv/scripts/image_analysis/$d/*.py`
+      do
+        /bin/sed -i -e "s#'all','rgb'#'all'#" $f
+      done
+    done
 
-# fix plancv bugs in analyze_color()
-# analyze_color takes 11 args, but image_analysis scripts put 12
-for d in nir_sv vis_sv  vis_tv
-do
-  for f in `ls ${CLOWDER_HOME}/plantcv/scripts/image_analysis/$d/*.py`
-  do
-    /bin/sed -i -e "s#'all','rgb'#'all'#" $f
-  done
-done
-
-# start the extractor service
-source ${CLOWDER_HOME}/pyenv/bin/activate && ./${MAIN_SCRIPT}
+    # start the extractor service
+    source /home/extractor/pyenv/bin/activate && ./${MAIN_SCRIPT}
+fi

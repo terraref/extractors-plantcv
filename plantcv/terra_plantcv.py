@@ -43,7 +43,7 @@ class PlantCVIndoorAnalysis(TerrarefExtractor):
             for m in md:
                 if 'agent' in m and 'name' in m['agent']:
                     if m['agent']['name'].find(self.extractor_info['name']) > -1:
-                        print("skipping dataset %s, already processed" % resource['id'])
+                        logging.getLogger(__name__).info("skipping dataset %s, already processed" % resource['id'])
                         return CheckMessage.ignore
 
         # Expect at least 10 relevant files to execute this processing
@@ -162,14 +162,14 @@ class PlantCVIndoorAnalysis(TerrarefExtractor):
                 else:
                     vn_traits = pcia.process_sv_images_core(vis_id, img, nir_id, nir, nir2, traits)
 
-                logging.info("...uploading resulting metadata")
+                logging.getLogger(__name__).info("...uploading resulting metadata")
                 # upload the individual file metadata
                 metadata = build_metadata(host, self.extractor_info, nir_id, vn_traits[0], 'file')
                 upload_file_metadata(connector, host, secret_key, vis_id, metadata)
                 metadata = build_metadata(host, self.extractor_info, nir_id, vn_traits[1], 'file')
                 upload_file_metadata(connector, host, secret_key, nir_id, metadata)
             except:
-                logging.error("...error generating vn_traits data; no metadata uploaded")
+                logging.getLogger(__name__).error("...error generating vn_traits data; no metadata uploaded")
 
         # compose the summary traits
         trait_list = pcia.generate_traits_list(traits)

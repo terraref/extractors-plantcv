@@ -1,77 +1,72 @@
-FROM ncsa/clowder-python-base
-MAINTAINER Yan Y. Liu <yanliu@illinois.edu>
+FROM terraref/terrautils
+MAINTAINER Max Burnette <mburnet2@illinois.edu>
 
-# Setup environment variables. These are passed into the container. You can change
-# these to your setup. If RABBITMQ_URI is not set, it will try and use the rabbitmq
-# server that is linked into the container. MAIN_SCRIPT is set to the script to be
-# executed by entrypoint.sh
-ENV CLOWDER_HOME="/home/clowder" \
-    EXTRACTOR_HOME="/home/clowder/extractors-lemnatec-indoor/plantcv" \
-    RABBITMQ_URI="" \
-    RABBITMQ_EXCHANGE="clowder" \
-    RABBITMQ_VHOST="%2F" \
-    RABBITMQ_QUEUE="terra.plantcv" \
-    MAIN_SCRIPT="terra_plantcv.py"
+# Install any programs needed
+# TODO: Can we remove this user ID and mount files as Max?
+RUN useradd -u 49044 extractor \
+    && mkdir -p /home/extractor/sites/ua-mac/raw_data \
+    && mkdir -p /home/extractor/sites/ua-mac/Level_1/stereoTop_geotiff \
+    && chown -R extractor /home/extractor
 
 ### plantcv part: start
 # Install common utils & plantcv dependencies
 USER root
-RUN apt-get -y update && \
-        apt-get install -y -q build-essential && \
-        apt-get install -y -q wget git imagemagick \
-            unzip cmake libgtk2.0-dev \
-            python-dev python-numpy python-gtk2 python-matplotlib python-pip \
-            libavcodec-dev libavformat-dev libswscale-dev libdc1394-22 \
-            libjpeg-dev libpng-dev libjasper-dev libtiff-dev libtbb-dev sqlite3 && \
-        rm -rf /var/lib/apt/lists/*
+RUN apt-get -y update \
+    && apt-get install -y -q git \
+        unzip \
+        cmake \
+        libgtk2.0-dev \
+        python-numpy \
+        python-gtk2 \
+        python-matplotlib \
+        libavcodec-dev \
+        libavformat-dev \
+        libswscale-dev \
+        libdc1394-22 \
+        libjpeg-dev \
+        libjasper-dev \
+        libtiff-dev \
+        libtbb-dev \
+        sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 
-USER clowder
-RUN cd ${CLOWDER_HOME} && \
-    mkdir software && \
-    # install opencv from source with python support, plantcv
-    cd ${CLOWDER_HOME}/software && \
-    git clone -q https://github.com/Itseez/opencv.git && \
-    cd opencv && git checkout -q 2.4.8 && \
-    mkdir build && cd build && \
-    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=${CLOWDER_HOME}/opencv -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON .. && \
-    make && make install && \
-    cd ${CLOWDER_HOME}/software && rm -fr opencv
+# install opencv from source with python support, plantcv
+USER extractor
+RUN cd /home/extractor && mkdir software && cd software \
+    && git clone -q https://github.com/Itseez/opencv.git \
+    && cd opencv && git checkout -q 2.4.8 \
+    && mkdir build && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/home/extractor/opencv -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON .. \
+    && make && make install \
+    && cd ../.. && rm -fr opencv
 
 # install plantcv & prepare output dir
-RUN cd ${CLOWDER_HOME} && \
-    mkdir -p plantcv-output && \
-    git clone https://github.com/danforthcenter/plantcv.git
+RUN cd /home/extractor \
+    && mkdir -p plantcv-output \
+    && git clone https://github.com/danforthcenter/plantcv.git
 
 # set env
-ENV PYTHONPATH="${CLOWDER_HOME}/opencv/lib/python2.7/dist-packages:${CLOWDER_HOME}/plantcv/lib:/usr/lib/python2.7/dist-packages:${PYTHONPATH}"
-ENV PATH="${CLOWDER_HOME}/opencv/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${CLOWDER_HOME}/opencv/lib:${LD_LIBRARY_PATH}"
+ENV PYTHONPATH="/home/extractor/opencv/lib/python2.7/dist-packages:/home/extractor/plantcv/lib:/usr/lib/python2.7/dist-packages:${PYTHONPATH}"
+ENV PATH="/home/extractor/opencv/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/home/extractor/opencv/lib:${LD_LIBRARY_PATH}"
 ### plantcv part: end
 
-# Install the requied software.
+# Install the required software.
 USER root
-RUN apt-get -y update && \
-    apt-get install -y python-opencv opencv-data && \
-    yes | pip install virtualenv
-RUN chsh -s /bin/bash clowder
+RUN apt-get -y update \
+    && apt-get install -y python-opencv \
+        opencv-data \
+    && yes | pip install virtualenv
+RUN chsh -s /bin/bash extractor
 
-# Get git source, fix the default paths.
-USER clowder
-RUN cd ${CLOWDER_HOME} && \
-    git clone https://github.com/terraref/extractors-lemnatec-indoor.git && \
-    virtualenv pyenv && \
-    . pyenv/bin/activate && \
-    pip install pika requests wheel matplotlib enum pyyaml && \
-    pip install git+https://opensource.ncsa.illinois.edu/stash/scm/cats/pyclowder2.git && \
-    deactivate
-
-USER root
 # Copy the helper script.
-COPY entrypoint.sh *.py ${EXTRACTOR_HOME}/
-RUN chown clowder ${EXTRACTOR_HOME}/entrypoint.sh && \
-    chmod 755 ${EXTRACTOR_HOME}/entrypoint.sh
+COPY entrypoint.sh extractor_info.json *.py /home/extractor/
 
-USER clowder
-WORKDIR ${EXTRACTOR_HOME}
-CMD ["./entrypoint.sh"]
+USER extractor
+ENTRYPOINT ["/home/extractor/entrypoint.sh"]
+CMD ["extractor"]
 
+ENV RABBITMQ_EXCHANGE="terra" \
+    RABBITMQ_VHOST="%2F" \
+    RABBITMQ_QUEUE="terra.lemnatec.plantcv" \
+    MAIN_SCRIPT="terra_plantcv.py"

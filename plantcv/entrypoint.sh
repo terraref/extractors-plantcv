@@ -19,18 +19,19 @@ if [ "$1" = 'extractor' ]; then
     cd /home/extractor
 
     # Set plantcv env var
-    /bin/sed -i -e "s#plantcvOutputDir =.*#plantcvOutputDir = '/home/extractor/plantcv-output'#" config.py
+    # /bin/sed -i -e "s#plantcvOutputDir =.*#plantcvOutputDir = '/home/extractor/plantcv-output'#" config.py
 
     # fix plancv bugs in analyze_color()
     # analyze_color takes 11 args, but image_analysis scripts put 12
-    for d in nir_sv vis_sv  vis_tv
-    do
-      for f in `ls $/home/extractor/plantcv/scripts/image_analysis/$d/*.py`
-      do
-        /bin/sed -i -e "s#'all','rgb'#'all'#" $f
-      done
-    done
+    #for d in nir_sv vis_sv  vis_tv
+    #do
+    #  for f in `ls $/home/extractor/plantcv/plantcv/*.py`
+    #  do
+    #    /bin/sed -i -e "s#'all','rgb'#'all'#" $f
+    #  done
+    #done
 
     # start the extractor service
-    source /home/extractor/pyenv/bin/activate && ./${MAIN_SCRIPT}
+    # source /home/extractor/pyenv/bin/activate && ./${MAIN_SCRIPT}
+    ./${MAIN_SCRIPT}
 fi

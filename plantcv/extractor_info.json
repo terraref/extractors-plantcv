@@ -14,5 +14,6 @@
     },
     "external_services": [],
     "dependencies": [],
-    "bibtex": []
+    "bibtex": [],
+    "localhost_remap": "https://terraref.ncsa.illinois.edu/clowder"
 }
